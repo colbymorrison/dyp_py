@@ -1,26 +1,33 @@
 from gcal import GCal
-from gmail import GMail
-from gauth import Gauth
+#from gmail import GMail
+from gauth import GAuth
 from reports import Reports
 import aiohttp
-import ansyncio
+import asyncio
+import json
 
 async def main():
     auth = GAuth()
     mail = GMail(auth.mail)
-    async with aiohttp.ClientSession() as session:
-        reports = Reports(session, mail)
+    with open('secrets/creds.json', 'r') as f:
+        creds = json.load(f)
 
-        # Login in to DYP 
-        login = asycio.create_task(reports.login())
+    session = aiohttp.ClientSession()
+    reports = Reports(session, creds)
+    # Login
+    login = asyncio.create_task(reports.login())
 
-        # Get events to process 
-        calendar = GCal(gAuth.calendar, reports)
-        calendar.query_calendar()
+    # Get events to process 
+    calendar = GCal(auth.calendar, reports)
+    calendar.query_calendar()
 
-        # Make sure we're logged in & process events
-        await login
-        asyncio.gather(*[reports.download_report(data) for data in calendar.events])
+    # Make sure we're logged in & process events
+    await login
+    if len(calendar.events) > 0:
+        # Call reports.find_user for each new event, this downloads report and creates draft
+        await asyncio.wait([reports.find_user(data) for data in calendar.events])
+
+    await session.close()
 
 
 

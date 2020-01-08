@@ -5,18 +5,19 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/gmail.compose']
 
 class GAuth:
     def __init__(self):
         creds = self.__get_creds()
         self.calendar = build('calendar', 'v3', credentials=creds)
-        self.mail = #TODO
+        self.mail = build('gmail', 'v1', credentials=creds)
 
     def __get_creds(self):
         creds = None
-        if os.path.exists('token.pickle'):
-            with open('token.pickle', 'rb') as token:
+        token_path = "secrets/token.pickle"
+        if os.path.exists(token_path):
+            with open(token_path, 'rb') as token:
                 creds = pickle.load(token)
 
         # If there are no (valid) credentials available, let the user log in.
@@ -25,10 +26,11 @@ class GAuth:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                          'client_secret.json', SCOPES)
+                          'secrets/client_secret.json', SCOPES)
                 creds = flow.run_local_server(port=0)
-            with open('token.pickle', 'wb') as token:
+            with open(token_path, 'wb') as token:
                 pickle.dump(creds, token)
 
         return creds 
 
+gauth = GAuth()

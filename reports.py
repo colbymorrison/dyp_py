@@ -1,8 +1,9 @@
 from bs4 import BeautifulSoup
+import gmail
 import aiohttp
 import asyncio
-import re
 import json
+import re
 
 class Reports:
     def __init__(self, session, creds):
@@ -17,39 +18,41 @@ class Reports:
                 }
         await self.session.post(self.creds["login_url"], data=data)
 
-    # Finds and downloads report for this user, returns filename of downlaoded file
-    #async def download_report(data):
 
-        
+    # Finds a user in the database and calls download_and_send_draft 
+    # for each of their reports
+    async def find_user(self, user_data):
+        # Search through users by last name & email
+        data = {'CID': '', 'CLNAME': user_data["last"], 'PURCHDT': '', 'COMPLETETS': '', 'PEMAIL': '', 'CEMAIL': user_data["email"], 'last24': '' }
 
-    async def get_gen_page(last, email):
+        print(f"Searching for user {user_data['email']}")
+        async with self.session.post(self.creds["gen_url"], data=data) as response:
+            html = await response.text()
 
-        data = {'CID': '', 'CLNAME': last, 'PURCHDT': '', 'COMPLETETS': '', 'PEMAIL': '', 'CEMAIL': email, 'last24': '' }
-
-        async with session.post(self.creds["gen_url"], data) as response:
-            return response.text
-
-    async def parse_html(self, first, last, email):
-        with open('response.html', 'r') as f:
-            html = f.readlines()
-        html = ''.join(html)
         soup = BeautifulSoup(html, 'html.parser')
-
-        # Table entries for respondents are tagged dataEven or dataOdd
+    
+        # One task is scheduled for each report to download report and create draft
+        tasks = []
+        # Search results are in a table, table entries are tagged dataEven or dataOdd
         for tag in soup.find_all("tr",re.compile("dataEven|dataOdd")):
             found = False
-            print(tag)
 
-            # If we find either a matching email or name, we call it a match
+            # Indexed [Code, Name, Type, TEmail, PEmail, PName, PDate, RName, Completedate, link]
+            rows = tag.find_all('td')
 
-            for rpt_email in tag.find_all(href=re.compile("mailto:*")):
-                if(rpt_email.text.strip() == email):
-                    print("!")
+            if len(rows) < 10:
+                print("error!")
+                return
+
+            # Succeed if either email or name matches
+            for email in rows[3:5]:
+                if(email.text.strip().lower() == user_data["email"]):
                     found = True
 
-            if found == False and last != '':
-                for name in tag.find_all(string=re.compile(".*,.*")):
-                    if(f"{last}, {first}" == name.lower()):
+            if not found and user_data["last"] != '':
+                for name in (rows[1], rows[5]):
+                    print(f"Testing name {name}")
+                    if(f'{user_data["last"]}, {user_data["first"]}' == name.text.lower()):
                         print("NM")
                         found = True
                             
@@ -57,23 +60,26 @@ class Reports:
             # Found our table entry!
             # Find href to admin_rpt_generate
             if found:
-                report_str = tag.find(href=re.compile("admin_rpt_generate*"))
-                href = report_str["href"]
+                href = rows[9].a["href"]
                 repid = href.split('repid=')[1].split('&')[0];
 
+                # Can't generate a combined report
                 if(repid=='210256' or repid=='289663' or repid=='289170'):
-                    print("Combined report")
+                    print(f"Combined report for user {user_data['email']}")
                     return
 
-                # TODO create_task for each
-                await self.gen_and_download_pdf(href)
+                # Start a task to download the report and create a draft and add the task to tasks
+                tasks.append(asyncio.create_task(self.download_and_send_draft(href, rows[7].text, user_data))
+                
+        # Return when all tasks have completed
+        await asyncio.wait(tasks)
 
-
-    # Generate and download a single report
-    async def gen_and_download_pdf(self, html):
+    # Generates and download a single report for a user
+    async def download_and_send_draft(self, href, report_name, user_data):
         # Get to 'generate report' page 
-        #async with self.session.post(self.creds["reports_url"]+href) as response:
-        #    html = await response.text()
+        print(f"Generating report for user {user_data['email']}")
+        async with self.session.post(self.creds["reports_url"]+href) as response:
+            html = await response.text()
 
         soup = BeautifulSoup(html, 'html.parser')
 
@@ -85,31 +91,34 @@ class Reports:
 
         params = zip(['cid','licid', 'pkgid', 'lid', 'repid', 'instrid', 'cdate'], onclick)
 
+        file_name = f"{user_data['first']}_{user_data['last']}_{report_name.replace(' ','')}"
+        user_data["file_name"] = file_name
+
+        print(f"Downloading file {file_name} with params {dict(params)}")
         async with self.session.post(self.creds["soap_url"], params = dict(params)) as response:
-            with open('test.pdf', 'wb') as f:
-                f.write(await response.read())
+            async with open(file_name, 'wb') as f:
+                await f.write(await response.read())
 
+        gmail.create_draft(user_creds)
+        os.unlink(file_name)
 
-
-
-        
             
 
                         
 ##### TEST ####
-async def test():
-    with open ('secrets/creds.json')  as f:
-        creds = json.load(f)
-
-    with open('./reports-repsonse.html', 'r') as f:
-        html = f.readlines()
-
-    html = ''.join(html)
-
-    async with aiohttp.ClientSession() as session:
-        reports = Reports(session, creds)
-        #await reports.login()
-        #await reports.parse_html("brooke", "myrland","brookieleilani83@gmail.com")
-        await reports.gen_and_download_pdf(html)
-
-asyncio.run(test())
+#async def test():
+ #   with open ('secrets/creds.json')  as f:
+ #       creds = json.load(f)
+#
+#    with open('./response.html', 'r') as f:
+#        html = f.readlines()
+#
+#    html = ''.join(html)
+#
+#    async with aiohttp.ClientSession() as session:
+#        reports = Reports(session, creds)
+#        await reports.login()
+#        await reports.find_user({"first": "brooke", "last": "myrland", "email": "brookieleilani83@gmail.com"}, html)
+##        #await reports.download_and_send_draft(html)
+#
+#asyncio.run(test())
