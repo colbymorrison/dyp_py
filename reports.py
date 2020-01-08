@@ -15,14 +15,14 @@ class Reports:
                 "user": self.creds["user"],
                 "password": self.creds["pass"]
                 }
-        await self.session.post(self.creds["login_url"], data)
+        await self.session.post(self.creds["login_url"], data=data)
 
     # Finds and downloads report for this user, returns filename of downlaoded file
     #async def download_report(data):
 
         
 
-    async def get_gen_page(last, email,self.creds):
+    async def get_gen_page(last, email):
 
         data = {'CID': '', 'CLNAME': last, 'PURCHDT': '', 'COMPLETETS': '', 'PEMAIL': '', 'CEMAIL': email, 'last24': '' }
 
@@ -48,7 +48,7 @@ class Reports:
                     found = True
 
             if found == False and last != '':
-                for name in tag.find_all(string=re.compile(".*\,.*")):
+                for name in tag.find_all(string=re.compile(".*,.*")):
                     if(f"{last}, {first}" == name.lower()):
                         print("NM")
                         found = True
@@ -66,28 +66,50 @@ class Reports:
                     return
 
                 # TODO create_task for each
-                await gen_and_download_pdf(href)
+                await self.gen_and_download_pdf(href)
 
-    
-     async def gen_and_download_pdf(href):
-        async with sesson.post(self.creds["reports_url"]+href) as response:
-            print(response.text)
 
-            with open('reports-repsonse.html', 'r') as f:
-                f.write(response.text)
+    # Generate and download a single report
+    async def gen_and_download_pdf(self, html):
+        # Get to 'generate report' page 
+        #async with self.session.post(self.creds["reports_url"]+href) as response:
+        #    html = await response.text()
 
+        soup = BeautifulSoup(html, 'html.parser')
+
+        # Find call to checkReport js method whose parameters are
+        # url parameters to download report
+        onclick = soup.find(onclick=re.compile(".*checkReport.*"))["onclick"]
+
+        onclick = onclick.replace('return checkReport(', '').replace(');', '').split(',');
+
+        params = zip(['cid','licid', 'pkgid', 'lid', 'repid', 'instrid', 'cdate'], onclick)
+
+        async with self.session.post(self.creds["soap_url"], params = dict(params)) as response:
+            with open('test.pdf', 'wb') as f:
+                f.write(await response.read())
+
+
+
+
+        
             
 
-            
-            
                         
 ##### TEST ####
 async def test():
     with open ('secrets/creds.json')  as f:
         creds = json.load(f)
 
+    with open('./reports-repsonse.html', 'r') as f:
+        html = f.readlines()
+
+    html = ''.join(html)
+
     async with aiohttp.ClientSession() as session:
         reports = Reports(session, creds)
-        await reports.parse_html("brooke", "myrland","brookieleilani83@gmail.com")
+        #await reports.login()
+        #await reports.parse_html("brooke", "myrland","brookieleilani83@gmail.com")
+        await reports.gen_and_download_pdf(html)
 
 asyncio.run(test())
