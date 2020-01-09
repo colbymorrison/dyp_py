@@ -4,20 +4,20 @@ from googleapiclient.errors import HttpError
 
 
 class GCal:
-    def __init__(self, service, reports):
-        self.cal_id = "h0t4huvhtfbalca4ieo94c8isg@group.calendar.google.com"
+    def __init__(self, service, cal_id,logger):
+        self.cal_id = cal_id
         self.token_file = "secrets/sync-token"
         self.service = service
-        self.reports = reports
         self.events = []
+        self.logger = logger
 
     def query_calendar(self):
         if os.stat(self.token_file).st_size == 0:
             self.__list_events(None)
         else:
-           # with open(self.token_file, 'r') as f:
-           #     sync_token = f.read()
-            self.__list_events(None)
+           with open(self.token_file, 'r') as f:
+                sync_token = f.read()
+           self.__list_events(sync_token)
 
 
     def __list_events(self, sync_token):
@@ -25,10 +25,10 @@ class GCal:
         page_token = ""
 
         if not sync_token:
-            print("Full sync")
-            # Get all items from 30 days ago until now
+            self.logger.info("Full sync")
+            # Get all items from 5 days ago until now
             today = datetime.datetime.today()
-            time_min = (today - datetime.timedelta(days=2)).isoformat() + 'Z'
+            time_min = (today - datetime.timedelta(days=5)).isoformat() + 'Z'
             request = events_api.list(calendarId=self.cal_id, timeMin=time_min, pageToken=page_token)
         else:
             request = events_api.list(calendarId=self.cal_id, pageToken=page_token, syncToken=sync_token)
@@ -38,11 +38,12 @@ class GCal:
                 events = request.execute()
             except HttpError as err:
                 if err.resp.status == 410:
-                    print("Invalid SyncToken")
-                    list_events(None)
+                    self.logger.error("Invalid SyncToken")
+                    self.__list_events(None)
                 else:
                     raise err
 
+            # Return if no items
             if not (items := events.get("items")):
                 return
 
@@ -61,14 +62,16 @@ class GCal:
         with open(self.token_file, 'w') as f:
             f.write(sync_token)
         
+    # Extract name, email, and event id from event and add to events array
     def __process_item(self, item):
         if not (attendees := item.get("attendees")):
-            print("No attendees!")
+            self.logger.debug("No attendees!")
             email = item.get("summary")
             return
 
         attendees = attendees[0]
 
+        first = ""
         last = ""
         if name := attendees.get("displayName"):
             name = name.split()
@@ -79,6 +82,6 @@ class GCal:
                 last = name[length-1]
 
         email = attendees.get("email")
-        print({"id": item.get('id'), "first":first, "last":last, "email":email})
+        self.logger.debug({"id": item.get('id'), "first":first, "last":last, "email":email})
         self.events.append({"id": item.get('id'), "first":first.lower(), "last":last.lower(), "email":email})
 

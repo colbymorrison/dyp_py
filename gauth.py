@@ -8,10 +8,11 @@ from google.auth.transport.requests import Request
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/gmail.compose']
 
 class GAuth:
-    def __init__(self):
+    def __init__(self, logger):
         creds = self.__get_creds()
-        self.calendar = build('calendar', 'v3', credentials=creds)
-        self.mail = build('gmail', 'v1', credentials=creds)
+        self.calendar = build('calendar', 'v3', credentials=creds, cache_discovery=False)
+        self.mail = build('gmail', 'v1', credentials=creds, cache_discovery=False)
+        self.logger = logger
 
     def __get_creds(self):
         creds = None
@@ -33,4 +34,4 @@ class GAuth:
 
         return creds 
 
-gauth = GAuth()
+# gauth = GAuth()
