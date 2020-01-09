@@ -23,12 +23,18 @@ async def main():
     # Get events to process 
     calendar = GCal(auth.calendar, creds["cal_id"], logger)
     calendar.query_calendar()
+    #calendar.users=[{'id': 0, 'first': 'Peter', 'last': 'Simpson', 'email': '7peter.simpson@gmail.com'},{'id': 1, 'first': 'Laura', 'last': 'Simpson', 'email': 'laura.simpson141@gmail.com'},{'id': 2, 'first': 'Maylon', 'last': 'Tate', 'email': 'maylon.tate@yahoo.com'}]
+    #calendar.event_data=[['2k99anobhcco0kdnhumjp5dvmr', 'Peter Simpson - Strong Interest Inventory Feedback Session'], ['0b7dnqfqh1d116cmf190ifseld', 'Laura Simpson - Strong Interest Inventory Feedback Session'], ['1hlaqu80kbpputnvkvs9jebi76', 'Maylon Tate - Myers-Briggs Feedback Session']]
+
 
     # Make sure we're logged in & process events
     await login
-    if len(calendar.events) > 0:
+    if len(calendar.users) > 0:
         # Call reports.find_user for each new event, this downloads report and creates draft
-        await asyncio.wait([reports.download_reports_and_send_draft(data) for data in calendar.events])
+        done, pending = await asyncio.wait([reports.download_reports_and_send_draft(data) for data in calendar.users])
+
+        for task in done:
+            calendar.patch(task.result())
 
     await session.close()
 

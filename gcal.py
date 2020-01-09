@@ -1,5 +1,6 @@
 import os
 import datetime
+from gauth import GAuth
 from googleapiclient.errors import HttpError
 
 
@@ -8,7 +9,8 @@ class GCal:
         self.cal_id = cal_id
         self.token_file = "secrets/sync-token"
         self.service = service
-        self.events = []
+        self.users = [] # name and email of each user 
+        self.event_data = [] # id and summary of each new event
         self.logger = logger
 
     def query_calendar(self):
@@ -64,24 +66,44 @@ class GCal:
         
     # Extract name, email, and event id from event and add to events array
     def __process_item(self, item):
-        if not (attendees := item.get("attendees")):
-            self.logger.debug("No attendees!")
-            email = item.get("summary")
+        if item.get("status") == "cancelled" or item.get("summary")[-1] == '*':
+            self.logger.debug("Invalid event")
             return
-
-        attendees = attendees[0]
 
         first = ""
         last = ""
-        if name := attendees.get("displayName"):
-            name = name.split()
-            first = name[0]
+        if attendees := item.get("attendees"):
+            attendees = attendees[0]
 
-            length = len(name)
-            if length >= 2:
-                last = name[length-1]
+            if name := attendees.get("displayName"):
+                name = name.split()
+                first = name[0]
 
-        email = attendees.get("email")
-        self.logger.debug({"id": item.get('id'), "first":first, "last":last, "email":email})
-        self.events.append({"id": item.get('id'), "first":first.lower(), "last":last.lower(), "email":email})
+                length = len(name)
+                if length >= 2:
+                    last = name[length-1]
+
+            email = attendees.get("email")
+        else:
+            self.logger.debug("No attendees!")
+            email = item.get("summary")
+
+        self.logger.debug({"id": len(self.users), "first":first, "last":last, "email":email})
+        self.users.append({"id": len(self.users), "first":first.lower(), "last":last.lower(), "email":email})
+
+        self.logger.debug([item.get("id"), item.get("summary")])
+        self.event_data.append([item.get("id"), item.get("summary")])
+
+
+    def patch(self, idx):
+        if idx < 0:
+            return
+
+        event = self.event_data[idx]
+        self.logger.debug(f"Patching {event}")
+        try:
+            self.service.events().patch(calendarId=self.cal_id, eventId=event[0], body={"summary": event[1] + "*"}).execute()
+        except HttpError:
+            self.logger.error(f"Patch Error\n{err}")
+
 

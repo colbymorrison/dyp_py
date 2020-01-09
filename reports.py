@@ -24,7 +24,15 @@ class Reports:
 
     # Downloads reports and sends draft
     async def download_reports_and_send_draft(self, user_data):
-        download_tasks = await self.find_user(user_data)
+        download_tasks = await self.find_user(user_data, True)
+
+        if len(download_tasks) == 0:
+            download_tasks = await self.find_user(user_data, False)
+
+            if len(download_tasks) == 0:
+                self.logger.error(f"Couldn't find any reports for {user_data['email']}")
+                return -1
+
         done, pending = await asyncio.wait(download_tasks)
 
         files = []
@@ -41,13 +49,20 @@ class Reports:
             if os.path.exists(f):
                 os.remove(f)
             else:
-                logger.error(f"Couldn't delete {f} - does not exist")
+                self.logger.error(f"Couldn't delete {f} - does not exist")
+        
+        return user_data["id"]
 
     # Finds a user in the database and calls download_and_send_draft 
     # for each of their reports
-    async def find_user(self, user_data):
-        # Search through users by last name & email
-        data = {'CID': '', 'CLNAME': '', 'PURCHDT': '', 'COMPLETETS': '', 'PEMAIL': '', 'CEMAIL': user_data["email"], 'last24': '' }
+    async def find_user(self, user_data, search_by_email):
+        self.logger.debug(f"Search by email: {search_by_email}")
+        # Search through users by last name or email
+        data = {'CID': '', 'CLNAME': '', 'PURCHDT': '', 'COMPLETETS': '', 'PEMAIL': '', 'CEMAIL': '', 'last24': '' }
+        if search_by_email:
+            data['CEMAIL'] = user_data['email']
+        elif user_data['last'] != '':
+            data['CLNAME'] = user_data['last']
 
         self.logger.debug(f"Searching for user {user_data['email']}")
         async with self.session.post(self.creds["gen_url"], data=data) as response:
@@ -75,9 +90,7 @@ class Reports:
 
             if not found and user_data["last"] != '':
                 for name in (rows[1], rows[5]):
-                    self.logger.debug(f"Testing name {name}")
                     if(f'{user_data["last"]}, {user_data["first"]}' == name.text.lower()):
-                        print("NM")
                         found = True
                             
 
