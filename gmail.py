@@ -10,7 +10,7 @@ class GMail:
         self.logger=logger
 
     def create_draft(self, user_creds):
-        self.logger.debug(f"Creating draft for user {user_creds['email']}")
+        self.logger.debug(f"Creating draft for user {user_creds['email']} with files {user_creds['files']}")
         with open('secrets/draft-data.json', 'r') as f:
             draft_data = json.load(f)
 
@@ -33,8 +33,3 @@ class GMail:
             self.logger.error(f"Draft creation error to {user_creds['email']}:\n{err}")
 
         self.logger.info(f"Draft created to {user_creds['email']}")
-
-
-# gauth = GAuth()
-# user_creds = {"first": "colby", "last": "morrison", "email": "colbyamorrison@gmail.com", "id": "abcdefg", "file_name": "test.pdf"}
-# create_draft(gauth.mail, user_creds)

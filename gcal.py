@@ -88,7 +88,7 @@ class GCal:
             self.logger.debug("No attendees!")
             email = item.get("summary")
 
-        self.logger.debug({"id": len(self.users), "first":first, "last":last, "email":email})
+        self.logger.debug({"id": len(self.users), "first":first.lower(), "last":last.lower(), "email":email})
         self.users.append({"id": len(self.users), "first":first.lower(), "last":last.lower(), "email":email})
 
         self.logger.debug([item.get("id"), item.get("summary")])

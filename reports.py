@@ -39,7 +39,6 @@ class Reports:
         for task in done:
             files.append(f"pdfs/{task.result()}")
 
-        self.logger.debug(files)
         user_data['files'] = files
 
         # Create draft
@@ -56,7 +55,7 @@ class Reports:
     # Finds a user in the database and calls download_and_send_draft 
     # for each of their reports
     async def find_user(self, user_data, search_by_email):
-        self.logger.debug(f"Search by email: {search_by_email}")
+        self.logger.debug(f"Searching for user {user_data['email']}, by email: {search_by_email}")
         # Search through users by last name or email
         data = {'CID': '', 'CLNAME': '', 'PURCHDT': '', 'COMPLETETS': '', 'PEMAIL': '', 'CEMAIL': '', 'last24': '' }
         if search_by_email:
@@ -64,7 +63,6 @@ class Reports:
         elif user_data['last'] != '':
             data['CLNAME'] = user_data['last']
 
-        self.logger.debug(f"Searching for user {user_data['email']}")
         async with self.session.post(self.creds["gen_url"], data=data) as response:
             html = await response.text()
 
@@ -106,7 +104,7 @@ class Reports:
 
                 # report_name, user-lastname_user-firstname_report-type
                 report_name = rows[1].text.replace(', ','_') + "_" + rows[7].text.replace(' ','') + ".pdf"
-                # Start a task to download the report and create a draft and add the task to tasks
+                # Start a task to download the report and create a draft, add the task to tasks array
                 tasks.append(asyncio.create_task(self.download_report(href, report_name, user_data)))
                 
         return tasks
@@ -114,7 +112,6 @@ class Reports:
     # Generates and download a single report for a user
     async def download_report(self, href, report_name, user_data):
         # Get to 'generate report' page 
-        self.logger.debug(f"Generating report for user {user_data['email']}")
         async with self.session.post(self.creds["reports_url"]+href) as response:
             html = await response.text()
 

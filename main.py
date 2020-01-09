@@ -9,7 +9,7 @@ import json
 
 async def main():
     logger = get_logger()
-    logger.debug("Start")
+    logger.info("Start")
     auth = GAuth(logger)
     with open('secrets/creds.json', 'r') as f:
         creds = json.load(f)
@@ -23,9 +23,6 @@ async def main():
     # Get events to process 
     calendar = GCal(auth.calendar, creds["cal_id"], logger)
     calendar.query_calendar()
-    #calendar.users=[{'id': 0, 'first': 'Peter', 'last': 'Simpson', 'email': '7peter.simpson@gmail.com'},{'id': 1, 'first': 'Laura', 'last': 'Simpson', 'email': 'laura.simpson141@gmail.com'},{'id': 2, 'first': 'Maylon', 'last': 'Tate', 'email': 'maylon.tate@yahoo.com'}]
-    #calendar.event_data=[['2k99anobhcco0kdnhumjp5dvmr', 'Peter Simpson - Strong Interest Inventory Feedback Session'], ['0b7dnqfqh1d116cmf190ifseld', 'Laura Simpson - Strong Interest Inventory Feedback Session'], ['1hlaqu80kbpputnvkvs9jebi76', 'Maylon Tate - Myers-Briggs Feedback Session']]
-
 
     # Make sure we're logged in & process events
     await login
