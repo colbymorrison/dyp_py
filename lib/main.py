@@ -11,7 +11,7 @@ async def main():
     logger = get_logger()
     logger.info("Start")
     auth = GAuth(logger)
-    with open('secrets/creds.json', 'r') as f:
+    with open('../secrets/creds.json', 'r') as f:
         creds = json.load(f)
 
     mail = GMail(auth.mail, logger)
@@ -37,7 +37,7 @@ async def main():
 
 def get_logger():
     formatter = logging.Formatter('%(asctime)s - %(filename)s - %(message)s')
-    handler = logging.FileHandler("reports.log")
+    handler = logging.FileHandler("../reports.log")
     handler.setFormatter(formatter)
 
     logger = logging.getLogger("reports")

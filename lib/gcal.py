@@ -7,7 +7,7 @@ from googleapiclient.errors import HttpError
 class GCal:
     def __init__(self, service, cal_id,logger):
         self.cal_id = cal_id
-        self.token_file = "secrets/sync-token"
+        self.token_file = "../secrets/sync-token"
         self.service = service
         self.users = [] # name and email of each user 
         self.event_data = [] # id and summary of each event
