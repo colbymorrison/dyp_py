@@ -22,8 +22,8 @@ class Reports:
                 }
         await self.session.post(self.creds["login_url"], data=data)
 
-    # Downloads reports and sends draft
     async def download_reports_and_send_draft(self, user_data):
+        # Search database by email, if no results search by last name
         download_tasks = await self.find_user(user_data, True)
 
         if len(download_tasks) == 0:
@@ -35,20 +35,11 @@ class Reports:
 
         done, pending = await asyncio.wait(download_tasks)
 
-        files = []
-        for task in done:
-            files.append(f"pdfs/{task.result()}")
-
-        user_data['files'] = files
+        user_data['files'] = list(map(lambda task: f"pdfs/{task.result()}", done))
 
         # Create draft
         self.gmail.create_draft(user_data)
 
-        for f in files:
-            if os.path.exists(f):
-                os.remove(f)
-            else:
-                self.logger.error(f"Couldn't delete {f} - does not exist")
         
         return user_data["id"]
 
@@ -68,7 +59,7 @@ class Reports:
 
         soup = BeautifulSoup(html, 'html.parser')
     
-        # One task is scheduled for each report to download report and create draft
+        # One task is scheduled for each report to download report
         tasks = []
         # Search results are in a table, table entries are tagged dataEven or dataOdd
         for tag in soup.find_all("tr",re.compile("dataEven|dataOdd")):
@@ -101,9 +92,11 @@ class Reports:
                 # Can't generate a combined report
                 if(repid=='210256' or repid=='289663' or repid=='289170'):
                     self.logger.debug(f"Combined report for user {user_data['email']}")
+                    return
 
-                # report_name, user-lastname_user-firstname_report-type
+                # report_name: user-lastname_user-firstname_report-type
                 report_name = rows[1].text.replace(', ','_') + "_" + rows[7].text.replace(' ','') + ".pdf"
+
                 # Start a task to download the report and create a draft, add the task to tasks array
                 tasks.append(asyncio.create_task(self.download_report(href, report_name, user_data)))
                 

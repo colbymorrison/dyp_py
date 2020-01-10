@@ -10,7 +10,7 @@ class GCal:
         self.token_file = "secrets/sync-token"
         self.service = service
         self.users = [] # name and email of each user 
-        self.event_data = [] # id and summary of each new event
+        self.event_data = [] # id and summary of each event
         self.logger = logger
 
     def query_calendar(self):
@@ -75,32 +75,35 @@ class GCal:
         if attendees := item.get("attendees"):
             attendees = attendees[0]
 
+            email = attendees.get("email")
+
             if name := attendees.get("displayName"):
                 name = name.split()
                 first = name[0]
 
-                length = len(name)
-                if length >= 2:
-                    last = name[length-1]
+                if len(name) >= 2:
+                    last = name[len(name)-1]
 
-            email = attendees.get("email")
         else:
             self.logger.debug("No attendees!")
             email = item.get("summary")
 
-        self.logger.debug({"id": len(self.users), "first":first.lower(), "last":last.lower(), "email":email})
-        self.users.append({"id": len(self.users), "first":first.lower(), "last":last.lower(), "email":email})
+        user_data = {"idx": len(self.users), "first":first.lower(), "last":last.lower(), "email":email}
+        self.logger.debug(user_data)
+        self.users.append(user_data)
 
-        self.logger.debug([item.get("id"), item.get("summary")])
-        self.event_data.append([item.get("id"), item.get("summary")])
+        event_data = [item.get("id"), item.get("summary")]
+        self.logger.debug(event_data)
+        self.event_data.append(event_data)
 
 
-    def patch(self, idx):
-        if idx < 0:
-            return
+    def patch(self, user_data):
+        idx = self.event_data.index(user_data)
 
+        # event[0] == eventId, event[1] == Original event summary (title)
         event = self.event_data[idx]
         self.logger.debug(f"Patching {event}")
+
         try:
             self.service.events().patch(calendarId=self.cal_id, eventId=event[0], body={"summary": event[1] + "*"}).execute()
         except HttpError:

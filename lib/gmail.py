@@ -1,6 +1,7 @@
 from email.message import EmailMessage
 from googleapiclient.errors import HttpError
 from gauth import GAuth
+import os
 import base64
 import json
 
@@ -21,10 +22,14 @@ class GMail:
         msg.set_content(draft_data["body"])
 
         for file_name in user_creds['files']:
-            with open(file_name, 'rb') as f:
-                pdf_data = f.read()
+            if os.path.exists(f):
+                with open(file_name, 'rb') as f:
+                    pdf_data = f.read()
 
-            msg.add_attachment(pdf_data, filename=file_name.replace('pdfs/',''), maintype="application", subtype="pdf")
+                msg.add_attachment(pdf_data, filename=file_name.replace('pdfs/',''), maintype="application", subtype="pdf")
+                    os.remove(f)
+             else:
+                self.logger.error(f"Couldn't create draft for {f} - file does not exist")
 
         encoded = base64.urlsafe_b64encode(msg.as_string().encode())
         try:

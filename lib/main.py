@@ -27,7 +27,7 @@ async def main():
     # Make sure we're logged in & process events
     await login
     if len(calendar.users) > 0:
-        # Call reports.find_user for each new event, this downloads report and creates draft
+        # Call reports.dowload_reports_and_send_draft for each new event, this downloads report and creates draft
         done, pending = await asyncio.wait([reports.download_reports_and_send_draft(data) for data in calendar.users])
 
         for task in done:
