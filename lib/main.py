@@ -2,6 +2,7 @@ from gcal import GCal
 from gmail import GMail
 from gauth import GAuth
 from reports import Reports
+import os
 import logging
 import aiohttp
 import asyncio
@@ -11,7 +12,7 @@ async def main():
     logger = get_logger()
     logger.info("Start")
     auth = GAuth(logger)
-    with open('../secrets/creds.json', 'r') as f:
+    with open(f'{os.environ.get("SECRETS")}/creds.json', 'r') as f:
         creds = json.load(f)
 
     mail = GMail(auth.mail, logger)
@@ -30,8 +31,10 @@ async def main():
         # Call reports.dowload_reports_and_send_draft for each new event, this downloads report and creates draft
         done, pending = await asyncio.wait([reports.download_reports_and_send_draft(data) for data in calendar.users])
 
+        # Patch events that drafts were succesfully created for (returned +ve)
         for task in done:
-            calendar.patch(task.result())
+            if result := task.result():
+                calendar.patch(result)
 
     await session.close()
 

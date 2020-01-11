@@ -7,7 +7,7 @@ from googleapiclient.errors import HttpError
 class GCal:
     def __init__(self, service, cal_id,logger):
         self.cal_id = cal_id
-        self.token_file = "../secrets/sync-token"
+        self.token_file = f"{os.environ.get('SECRETS')}/sync-token"
         self.service = service
         self.users = [] # name and email of each user 
         self.event_data = [] # id and summary of each event
@@ -88,7 +88,7 @@ class GCal:
             self.logger.debug("No attendees!")
             email = item.get("summary")
 
-        user_data = {"idx": len(self.users), "first":first.lower(), "last":last.lower(), "email":email}
+        user_data = {"first":first.lower(), "last":last.lower(), "email":email}
         self.logger.debug(user_data)
         self.users.append(user_data)
 
@@ -98,10 +98,8 @@ class GCal:
 
 
     def patch(self, user_data):
-        idx = self.event_data.index(user_data)
-
         # event[0] == eventId, event[1] == Original event summary (title)
-        event = self.event_data[idx]
+        event = self.event_data[self.users.index(user_data)]
         self.logger.debug(f"Patching {event}")
 
         try:

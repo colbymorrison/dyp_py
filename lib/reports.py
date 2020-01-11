@@ -31,20 +31,20 @@ class Reports:
 
             if len(download_tasks) == 0:
                 self.logger.error(f"Couldn't find any reports for {user_data['email']}")
-                return -1
+                return None
 
+        # Wait until all files have downloaded
         done, pending = await asyncio.wait(download_tasks)
 
-        user_data['files'] = list(map(lambda task: f"pdfs/{task.result()}", done))
+        # Get a list of all downloaded files
+        user_data['files'] = list(map(lambda task: f"../pdfs/{task.result()}", done))
 
-        # Create draft
         self.gmail.create_draft(user_data)
-
         
-        return user_data["id"]
+        return user_data
 
-    # Finds a user in the database and calls download_and_send_draft 
-    # for each of their reports
+    # Finds a user in the database and downloads each of thier reports
+    # returns an array of tasks for each download
     async def find_user(self, user_data, search_by_email):
         self.logger.debug(f"Searching for user {user_data['email']}, by email: {search_by_email}")
         # Search through users by last name or email
@@ -83,8 +83,6 @@ class Reports:
                         found = True
                             
 
-            # Found our table entry!
-            # Find href to admin_rpt_generate
             if found:
                 href = rows[9].a["href"]
                 repid = href.split('repid=')[1].split('&')[0];
@@ -92,7 +90,7 @@ class Reports:
                 # Can't generate a combined report
                 if(repid=='210256' or repid=='289663' or repid=='289170'):
                     self.logger.debug(f"Combined report for user {user_data['email']}")
-                    return
+                    continue 
 
                 # report_name: user-lastname_user-firstname_report-type
                 report_name = rows[1].text.replace(', ','_') + "_" + rows[7].text.replace(' ','') + ".pdf"
@@ -102,7 +100,7 @@ class Reports:
                 
         return tasks
 
-    # Generates and download a single report for a user
+    # Generates and downloads a single report for a user
     async def download_report(self, href, report_name, user_data):
         # Get to 'generate report' page 
         async with self.session.post(self.creds["reports_url"]+href) as response:
@@ -115,7 +113,6 @@ class Reports:
         onclick = soup.find(onclick=re.compile(".*checkReport.*"))["onclick"]
 
         onclick = onclick.replace('return checkReport(', '').replace(');', '').replace("\'",'').split(',');
-
         params = zip(['cid','licid', 'pkgid', 'lid', 'repid', 'instrid', 'cdate'], onclick)
 
         url = self.creds["soap_url"] 
@@ -124,11 +121,9 @@ class Reports:
 
         self.logger.debug(f"Downloading file {report_name}")
         async with self.session.get(url) as response:
-            async with aiofiles.open(f"pdfs/{report_name}", 'wb') as f:
+            async with aiofiles.open(f"../pdfs/{report_name}", 'wb') as f:
                 await f.write(await response.read())
 
         return report_name
 
             
-
-                        

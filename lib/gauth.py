@@ -1,6 +1,6 @@
 import datetime
 import pickle
-import os.path
+import os
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -16,7 +16,7 @@ class GAuth:
 
     def __get_creds(self):
         creds = None
-        token_path = "../secrets/token.pickle"
+        token_path = f"{os.environ.get('SECRETS')}/token.pickle"
         if os.path.exists(token_path):
             with open(token_path, 'rb') as token:
                 creds = pickle.load(token)
@@ -27,7 +27,7 @@ class GAuth:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                          '../secrets/client_secret.json', SCOPES)
+                          f'{os.environ.get("SECRETS")}/client_secret.json', SCOPES)
                 creds = flow.run_local_server(port=0)
             with open(token_path, 'wb') as token:
                 pickle.dump(creds, token)
