@@ -69,7 +69,7 @@ class Reports:
             rows = tag.find_all('td')
 
             if len(rows) < 10:
-                self.logger.error("error!")
+                self.logger.error("Error parsing table from database")
                 return
 
             # Succeed if either email or name matches

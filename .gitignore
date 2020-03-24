@@ -2,6 +2,7 @@ secrets/
 pdfs/
 *.log
 *.html
+*.pem
 
 # Environments
 .env

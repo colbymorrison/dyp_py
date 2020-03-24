@@ -45,7 +45,7 @@ def get_logger():
 
     logger = logging.getLogger("reports")
     logger.addHandler(handler)
-    logger.setLevel("DEBUG")
+    logger.setLevel("INFO")
 
     return logger
 
