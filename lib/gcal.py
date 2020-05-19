@@ -14,13 +14,12 @@ class GCal:
         self.logger = logger
 
     def query_calendar(self):
-        if os.stat(self.token_file).st_size == 0:
-            self.__list_events(None)
-        else:
+        try:
            with open(self.token_file, 'r') as f:
                 sync_token = f.read()
            self.__list_events(sync_token)
-
+        except FileNotFoundError:
+            self.__list_events(None)
 
     def __list_events(self, sync_token):
         events_api = self.service.events()

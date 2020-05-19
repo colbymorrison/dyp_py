@@ -16,3 +16,6 @@ venv.bak/
 __pycache__
 
 Pipfile.lock
+
+lib/run.sh
+reset.txt
