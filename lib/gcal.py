@@ -27,10 +27,8 @@ class GCal:
 
         if not sync_token:
             self.logger.info("Full sync")
-            # Get all items from 5 days ago until now
-            today = datetime.datetime.today()
-            time_min = (today - datetime.timedelta(days=5)).isoformat() + 'Z'
-            request = events_api.list(calendarId=self.cal_id, timeMin=time_min, pageToken=page_token)
+            # Get all items from today forward
+            request = events_api.list(calendarId=self.cal_id, timeMin=datetime.datetime.today(), pageToken=page_token)
         else:
             request = events_api.list(calendarId=self.cal_id, pageToken=page_token, syncToken=sync_token)
 
