@@ -11,7 +11,6 @@ import json
 async def main():
     logger = get_logger()
     logger.info("Start")
-    return
     auth = GAuth(logger)
     with open(f'{os.environ.get("SECRETS")}/creds.json', 'r') as f:
         creds = json.load(f)
@@ -41,10 +40,10 @@ async def main():
 
 def get_logger():
     # Log to log file
-    #handler = logging.FileHandler("../reports.log")
+    handler = logging.FileHandler("../reports.log")
 
     # Log to stderr
-    handler = logging.StreamHandler()
+    #handler = logging.StreamHandler()
 
     formatter = logging.Formatter('%(asctime)s - %(filename)s - %(message)s')
     handler.setFormatter(formatter)
