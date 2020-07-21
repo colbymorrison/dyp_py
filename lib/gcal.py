@@ -19,6 +19,7 @@ class GCal:
                 sync_token = f.read()
            self.__list_events(sync_token)
         except FileNotFoundError:
+            print("HI")
             self.__list_events(None)
 
     def __list_events(self, sync_token):
@@ -28,7 +29,8 @@ class GCal:
         if not sync_token:
             self.logger.info("Full sync")
             # Get all items from today forward
-            request = events_api.list(calendarId=self.cal_id, timeMin=datetime.datetime.today(), pageToken=page_token)
+            now = datetime.datetime.utcnow().isoformat() + 'Z'
+            request = events_api.list(calendarId=self.cal_id, timeMin=now, pageToken=page_token)
         else:
             request = events_api.list(calendarId=self.cal_id, pageToken=page_token, syncToken=sync_token)
 
